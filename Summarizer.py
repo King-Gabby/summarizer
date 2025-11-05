@@ -4,7 +4,7 @@ import pdfplumber
 from docx import Document
 import wikipedia
 import io
-from gtts import gTTS  # 🎧 NEW
+from gtts import gTTS  
 
 # Configuring the app
 st.set_page_config(page_title="Smart Summarizer", page_icon="🧠", layout="wide")
