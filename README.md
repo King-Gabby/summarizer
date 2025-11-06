@@ -5,3 +5,13 @@ summarizer
 learn mode
 dictionary
 library
+
+
+#libraries used
+streamlit
+from transformers import pipeline
+pdfplumber
+from docx import Document
+wikipedia
+io
+gtts gTTS 
