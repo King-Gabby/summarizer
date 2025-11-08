@@ -1,0 +1,6 @@
+streamlit
+pipeline from transformers
+pdfplumber
+gTTs #audio
+io
+random
