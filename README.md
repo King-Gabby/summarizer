@@ -27,3 +27,12 @@ dictionary
 library
 
 
+##Folder structure 
+smart-summarizer/
+├── summarizer.py
+├── requirements.txt
+├── library/          # Local storage for uploaded files
+├── README.md
+└── .gitignore
+
+
