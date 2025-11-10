@@ -3,11 +3,14 @@ from transformers import pipeline
 import pdfplumber
 from docx import Document
 import io
-from gtts import gTTS
+import pyttsx3
 import random
 import re
+import os
+import time
+from gtts import gTTS
 
-#helper & Extraction Utils
+# --- Helper functions ---
 def extract_text_from_pdf(file):
     text = ""
     try:
@@ -15,7 +18,6 @@ def extract_text_from_pdf(file):
             for page in pdf.pages:
                 text += page.extract_text() or ""
     except Exception:
-        #fallback: try reading as bytes and decode
         try:
             file.seek(0)
             text = file.read().decode("utf-8", errors="ignore")
@@ -28,7 +30,6 @@ def extract_text_from_docx(file):
         doc = Document(file)
         return "\n".join([para.text for para in doc.paragraphs])
     except Exception:
-        #fallback read bytes
         try:
             file.seek(0)
             return file.read().decode("utf-8", errors="ignore")
@@ -43,42 +44,30 @@ def extract_text_from_txt(file):
         return ""
 
 def clean_text(s):
-    s = re.sub(r"\s+", " ", s).strip()
-    return s
+    return re.sub(r"\s+", " ", (s or "")).strip()
 
 def chunk_text(text, max_words=900):
-    """Split text into chunks of up to max_words words."""
     words = text.split()
     return [" ".join(words[i:i+max_words]) for i in range(0, len(words), max_words)]
 
-#lightweight Keyword Quiz
-# -------------------------
-#very small stopword set so we don't depend on external libs
+# --- Quiz helpers ---
 STOPWORDS = {
     "the","and","is","in","it","of","to","a","that","this","for","with","as","on","are",
     "was","be","by","an","or","from","at","which","we","were","their","has","have","but",
-    "not","they","you","I","he","she","his","her","its","will","can","all","about"
+    "not","they","you","i","he","she","his","her","its","will","can","all","about"
 }
 
 def extract_candidate_keywords(text, top_k=10):
-    """Simple frequency-based keyword extraction from summary text."""
-    words = re.findall(r"\b[a-zA-Z]{4,}\b", text.lower())
+    words = re.findall(r"\b[a-zA-Z]{4,}\b", (text or "").lower())
     freqs = {}
     for w in words:
         if w in STOPWORDS:
             continue
         freqs[w] = freqs.get(w, 0) + 1
-    #sort by frequency
     sorted_words = sorted(freqs.items(), key=lambda x: x[1], reverse=True)
-    keywords = [w for w, _ in sorted_words][:top_k]
-    return keywords
+    return [w for w, _ in sorted_words][:top_k]
 
 def make_quiz_from_summary(summary_text, num_questions=3):
-    """
-    Creates simple fill-in-the-blank multiple choice questions using keywords found in the summary.
-    Each question: sentence with keyword masked, plus 3 distractors.
-    Returns: list of dicts {question, choices, answer}
-    """
     questions = []
     sentences = [s.strip() for s in re.split(r'(?<=[.!?])\s+', summary_text) if s.strip()]
     if not sentences:
@@ -94,25 +83,20 @@ def make_quiz_from_summary(summary_text, num_questions=3):
     for k in keywords:
         if len(questions) >= num_questions:
             break
-        # find a sentence that contains the keyword
         chosen_sentence = None
         for s in sentences:
             if re.search(r"\b" + re.escape(k) + r"\b", s, flags=re.I):
                 chosen_sentence = s
                 break
         if not chosen_sentence:
-            # fallback: pick any sentence
             chosen_sentence = random.choice(sentences)
 
-        #make blank by replacing first occurrence
         pattern = re.compile(r"(?i)\b" + re.escape(k) + r"\b")
         blank_sentence = pattern.sub("_____", chosen_sentence, count=1)
 
-        # create choices: correct = k, others = random words/distractors
         distractors = [w for w in keywords if w != k and w not in used_keywords]
         random.shuffle(distractors)
         choices = [k] + distractors[:3]
-        #if not enough distractors, add random words from summary
         if len(choices) < 4:
             extra = [w for w in re.findall(r"\b[a-zA-Z]{4,}\b", summary_text.lower()) if w not in choices and w not in STOPWORDS]
             random.shuffle(extra)
@@ -121,37 +105,41 @@ def make_quiz_from_summary(summary_text, num_questions=3):
                     break
                 choices.append(e)
         random.shuffle(choices)
-        questions.append({
-            "question": blank_sentence,
-            "choices": choices,
-            "answer": k
-        })
+        questions.append({"question": blank_sentence, "choices": choices, "answer": k})
         used_keywords.add(k)
     return questions
 
-
-#TTS (gTTS) helper
-def generate_audio(summary_text, lang="en"):
+# --- TTS helper ---
+def generate_audio(summary_text, offline_mode=False, lang="en"):
+    audio_bytes = io.BytesIO()
     try:
-        tts = gTTS(text=summary_text, lang=lang)
-        audio_bytes = io.BytesIO()
-        tts.write_to_fp(audio_bytes)
-        audio_bytes.seek(0)
+        if offline_mode:
+            engine = pyttsx3.init()
+            engine.save_to_file(summary_text, "temp_audio.mp3")
+            engine.runAndWait()
+            with open("temp_audio.mp3", "rb") as f:
+                audio_bytes.write(f.read())
+            audio_bytes.seek(0)
+            if os.path.exists("temp_audio.mp3"):
+                os.remove("temp_audio.mp3")
+        else:
+            tts = gTTS(text=summary_text, lang=lang)
+            tts.write_to_fp(audio_bytes)
+            audio_bytes.seek(0)
         return audio_bytes
     except Exception as e:
+        st.warning(f"TTS generation failed: {e}")
         return None
 
-#streamlit UI & Logic
+# --- Streamlit App ---
 st.set_page_config(page_title="Smart Summarizer", page_icon="🧠", layout="wide")
-st.title("Smart Summarizer. Summarize • Quiz • Listen")
-st.markdown("Upload or paste text, choose a style, generate a summary, optionally create a short quiz, and listen to the summary.")
+st.title("Smart Summarizer. Summarize • Quiz • Listen • Library")
+st.markdown("Upload/paste text, summarize, create a quiz, listen, and store materials in your local library.")
 
-#sidebar controls (as requested)
-st.sidebar.header("Settings")
-
-#model selection. Choose lightweight by default
+# Sidebar settings
+st.sidebar.header("Configure Summary ⚙️")
 model_choice = st.sidebar.selectbox(
-    "Model (quality vs speed):",
+    "Choose Model:",
     ("DistilBART (fast)", "BART Large (high quality)", "T5 Small (compact)"),
     index=0
 )
@@ -162,164 +150,206 @@ model_map = {
 }
 selected_model = model_map[model_choice]
 
-#summary style
 summary_style = st.sidebar.radio("Summary style:", ("Concise", "Balanced", "Detailed"), index=1)
-
-#map styles to token-length guidance (approximate)
 if summary_style == "Concise":
     min_len, max_len = 20, 80
 elif summary_style == "Detailed":
     min_len, max_len = 80, 350
-else:  # Balanced
+else:
     min_len, max_len = 40, 180
 
-#additional sidebar toggles
 enable_voice = st.sidebar.checkbox("Enable voice (play & download)", value=True)
-enable_quiz = st.sidebar.checkbox("Enable quiz generation", value=True)
-num_quiz_qs = st.sidebar.slider("Number of quiz questions", 1, 6, 3)
+offline_mode = st.sidebar.checkbox("Use Offline Voice (pyttsx3)", value=False)
+tts_lang = st.sidebar.selectbox(
+    "TTS language (online)", 
+    ["en", "es", "fr", "de", "hi", "ja", "zh"], 
+    index=0
+)
+tts_lang = st.sidebar.selectbox("Select Language:", ["en"], index=0)
+enable_quiz = st.sidebar.checkbox("Enable Quiz Generation", value=True)
+num_quiz_qs = st.sidebar.slider("Number of quiz questions", 1, 20, 3)
 max_chunk_words = st.sidebar.slider("Chunk size (words)", 400, 1200, 900, step=100)
 
+theme_choice = st.sidebar.radio("Select Theme:", ["Light Mode", "Dark Mode"], index=1)
+if theme_choice == "Light Mode":
+    st.markdown("""
+    <style>
+    body, .stApp {background-color: #ffffff; color: #000000;}
+    .stTextInput>div>input, .stTextArea>div>textarea {background-color:#f0f0f0; color:#000;}
+    .stButton>button {background-color:#e0e0e0; color:#000;}
+    </style>
+    """, unsafe_allow_html=True)
+else:
+    st.markdown("""
+    <style>
+    body, .stApp {background-color: #0e1117; color: #ffffff;}
+    .stTextInput>div>input, .stTextArea>div>textarea {background-color:#1c1f26; color:#fff;}
+    .stButton>button {background-color:#2a2d36; color:#fff;}
+    </style>
+    """, unsafe_allow_html=True)
+
 st.sidebar.markdown("---")
-st.sidebar.info("Developed by Gabryel — built for students & professionals")
+st.sidebar.info("Developed by Gabryel. For Students & Professionals")
 
-#load model (cached)
-
+# Load summarizer model
 @st.cache_resource
 def load_summarizer_model(model_name):
-    try:
-        return pipeline("summarization", model=model_name)
-    except Exception as e:
-        # bubbled up - streamlit will show exception on UI
-        raise e
+    return pipeline("summarization", model=model_name)
 
-#attempt to load model (deferred until user action to avoid long startup)
-model_warning = st.empty()
-model_obj = None
+# Session state init
+if "model_obj" not in st.session_state:
+    st.session_state["model_obj"] = None
+if "input_text" not in st.session_state:
+    st.session_state["input_text"] = ""
+if "summary_text" not in st.session_state:
+    st.session_state["summary_text"] = ""
+if "last_quiz" not in st.session_state:
+    st.session_state["last_quiz"] = {"id": None, "questions": []}
+if "quiz_answers" not in st.session_state:
+    st.session_state["quiz_answers"] = {}
 
-# Main input area
-col1, col2 = st.columns([2, 1])
+# --- Tabs ---
+tab_summarizer, tab_library = st.tabs(["📄 Summarizer", "📚 Library"])
 
-with col1:
-    st.subheader("Input")
-    uploaded_file = st.file_uploader("Upload (PDF / DOCX / TXT) or paste text below", type=["pdf", "docx", "txt"])
-    pasted = st.text_area("Or paste text here:", height=260)
+# Library tab
+LIB_FOLDER = "library"
+os.makedirs(LIB_FOLDER, exist_ok=True)
+with tab_library:
+    st.header("Library")
+    st.markdown("Upload and store course materials locally.")
+    uploaded_library_file = st.file_uploader("Upload file (PDF/DOCX/TXT)", type=["pdf","docx","txt"], key="lib_uploader")
+    if uploaded_library_file:
+        safe_name = re.sub(r"[^\w\-_\. ]","_", uploaded_library_file.name)
+        save_path = os.path.join(LIB_FOLDER, safe_name)
+        with open(save_path,"wb") as f: f.write(uploaded_library_file.getbuffer())
+        st.success(f"Saved: {safe_name}")
 
-    #use uploaded file if present, otherwise pasted text
-    input_text = ""
-    if uploaded_file is not None:
-        file_ext = uploaded_file.name.split(".")[-1].lower()
-        if file_ext == "pdf":
-            input_text = extract_text_from_pdf(uploaded_file)
-        elif file_ext == "docx":
-            input_text = extract_text_from_docx(uploaded_file)
-        elif file_ext == "txt":
-            input_text = extract_text_from_txt(uploaded_file)
-        input_text = clean_text(input_text)
-        if not input_text:
-            st.warning("Uploaded file could not be read or is empty.")
-    else:
-        input_text = clean_text(pasted)
-
-    if not input_text:
-        st.info("Paste text or upload a file to enable summarization.")
-
-with col2:
-    st.subheader("Quick Info")
-    st.write("**Model:**", model_choice)
-    st.write("**Style:**", summary_style)
-    st.write("**Voice:**", "On" if enable_voice else "Off")
-    st.write("**Quiz:**", "On" if enable_quiz else "Off")
-    st.write("Input size (approx words):", len(input_text.split()))
-
-#summarize action
-if input_text:
-    if st.button("Generate Summary "):
-        #load model when user triggers summarize
-        with st.spinner("Loading model and summarizing... this may take a moment on first run"):
-            try:
-                model_obj = load_summarizer_model(selected_model)
-            except Exception as e:
-                st.error(f"Model load failed: {e}")
-                st.stop()
-
-            #chunk long input
-            chunks = chunk_text(input_text, max_words=max_chunk_words)
-            all_parts = []
-            progress = st.progress(0)
-            for i, chunk in enumerate(chunks):
+    st.markdown("### Library Files")
+    files = sorted(os.listdir(LIB_FOLDER))
+    search_q = st.text_input("Search files:", key="lib_search")
+    if search_q: files = [f for f in files if search_q.lower() in f.lower()]
+    if files:
+        for fn in files:
+            col_a, col_b, col_c, col_d = st.columns([3,1,1,1])
+            col_a.write(fn)
+            if col_b.button("Preview", key=f"preview_{fn}"):
                 try:
-                    out = model_obj(chunk, max_length=max_len, min_length=min_len, do_sample=False)
-                    # some pipelines return list of dicts or a string; handle both
-                    if isinstance(out, list) and isinstance(out[0], dict) and "summary_text" in out[0]:
-                        text_part = out[0]["summary_text"]
-                    elif isinstance(out, list) and isinstance(out[0], str):
-                        text_part = out[0]
-                    elif isinstance(out, dict) and "summary_text" in out:
-                        text_part = out["summary_text"]
-                    else:
-                        text_part = str(out)
+                    p = os.path.join(LIB_FOLDER, fn)
+                    if fn.lower().endswith(".pdf"):
+                        preview_text = extract_text_from_pdf(open(p,"rb"))[:1500]
+                    elif fn.lower().endswith(".docx"):
+                        preview_text = extract_text_from_docx(open(p,"rb"))[:1500]
+                    elif fn.lower().endswith(".txt"):
+                        preview_text = open(p,"r",encoding="utf-8",errors="ignore").read(1500)
+                    else: preview_text = "Preview not supported."
                 except Exception as e:
-                    #if a chunk fails, try with smaller chunk size fallback
-                    try:
-                        #retry single smaller chunk
-                        small_chunks = chunk_text(chunk, max_words=max(200, max_chunk_words//2))
-                        part_accum = []
-                        for sc in small_chunks:
-                            r = model_obj(sc, max_length=max_len, min_length=min_len, do_sample=False)
-                            if isinstance(r, list) and isinstance(r[0], dict) and "summary_text" in r[0]:
-                                part_accum.append(r[0]["summary_text"])
-                            else:
-                                part_accum.append(str(r))
-                        text_part = " ".join(part_accum)
-                    except Exception:
-                        text_part = ""  # skip if still failing
-                all_parts.append(text_part)
-                progress.progress((i + 1) / len(chunks))
+                    preview_text = f"Preview failed: {e}"
+                st.info(preview_text)
+            if col_c.button("Load into Summarizer", key=f"load_{fn}"):
+                path = os.path.join(LIB_FOLDER, fn)
+                try:
+                    if fn.lower().endswith(".pdf"):
+                        loaded = extract_text_from_pdf(open(path,"rb"))
+                    elif fn.lower().endswith(".docx"):
+                        loaded = extract_text_from_docx(open(path,"rb"))
+                    elif fn.lower().endswith(".txt"):
+                        loaded = open(path,"r",encoding="utf-8",errors="ignore").read()
+                    else: loaded = ""
+                    st.session_state["input_text"] = clean_text(loaded)
+                    st.success(f"Loaded '{fn}' into Summarizer.")
+                except Exception as e: st.error(f"Failed: {e}")
+            if col_d.button("Delete", key=f"del_{fn}"):
+                try:
+                    os.remove(os.path.join(LIB_FOLDER, fn))
+                    st.warning(f"Deleted {fn}")
+                    st.experimental_rerun()
+                except Exception as e: st.error(f"Delete failed: {e}")
+    else:
+        st.info("Library empty.")
 
-            summary_text = clean_text(" ".join([p for p in all_parts if p]))
+# Summarizer tab
+with tab_summarizer:
+    st.header("Summarizer")
+    col_main, col_info = st.columns([3,1])
+    with col_main:
+        input_area = st.text_area("Upload/paste text or load from Library", value=st.session_state.get("input_text",""), height=300)
+        st.session_state["input_text"] = input_area
 
-        #display summary
-        st.success("Summary generated ✅")
-        st.markdown("### Summary")
-        st.write(summary_text)
-        st.caption(f"Original words: {len(input_text.split())}  |  Summary words: {len(summary_text.split())}")
+        summary_size = st.slider("Approx summary size (words)", 50, 500, 150, step=10)
+        if st.button("Generate Summary"):
+            if not st.session_state.get("input_text"):
+                st.warning("No input text found.")
+            else:
+                with st.spinner("Summarizing..."):
+                    if st.session_state["model_obj"] is None:
+                        st.session_state["model_obj"] = load_summarizer_model(selected_model)
+                    model_obj = st.session_state["model_obj"]
+                    user_max = summary_size
+                    user_min = max(20,int(summary_size*0.25))
+                    chunks = chunk_text(st.session_state["input_text"], max_words=max_chunk_words)
+                    parts = []
+                    prog = st.progress(0)
+                    for i,ch in enumerate(chunks):
+                        try:
+                            out = model_obj(ch, max_length=user_max, min_length=user_min, do_sample=False)
+                            if isinstance(out,list) and isinstance(out[0],dict) and "summary_text" in out[0]:
+                                parts.append(out[0]["summary_text"])
+                            else: parts.append(str(out))
+                        except Exception:
+                            parts.append("")
+                        prog.progress((i+1)/len(chunks))
+                    summary_text = clean_text(" ".join(parts))
+                    st.session_state["summary_text"] = summary_text
 
-        #voice (gTTS)
-        if enable_voice:
-            with st.spinner("Generating audio..."):
-                audio_file = generate_audio(summary_text)
-                if audio_file:
-                    st.audio(audio_file, format="audio/mp3")
-                    st.download_button("Download audio (mp3)", data=audio_file, file_name="summary.mp3", mime="audio/mp3")
-                else:
-                    st.warning("Audio generation failed. Try again or disable voice.")
+        if st.session_state.get("summary_text"):
+            st.success("Summary generated ✅")
+            st.markdown("### Summary")
+            st.write(st.session_state["summary_text"])
+            st.caption(f"Original words: {len(st.session_state['input_text'].split())} | Summary words: {len(st.session_state['summary_text'].split())}")
 
-        #download summary as text
-        st.download_button("Download summary (.txt)", data=summary_text, file_name="summary.txt", mime="text/plain")
+            # Audio
+            if enable_voice:
+                with st.spinner("Generating audio..."):
+                    audio = generate_audio(st.session_state["summary_text"], offline_mode=offline_mode, lang=tts_lang)
+                    if audio:
+                        st.audio(audio, format="audio/mp3")
+                        st.download_button("Download audio (mp3)", data=audio.getvalue(), file_name="summary.mp3", mime="audio/mp3")
+                    else:
+                        st.warning("Audio generation failed.")
 
-        #quiz generation
-        if enable_quiz:
-            with st.spinner("Creating quiz..."):
-                questions = make_quiz_from_summary(summary_text, num_questions=num_quiz_qs)
-                if not questions:
-                    st.info("Could not generate quiz questions from this summary.")
-                else:
-                    st.markdown("### Quiz — Test Yourself")
+            st.download_button("Download summary (.txt)", data=st.session_state["summary_text"], file_name="summary.txt", mime="text/plain")
+
+            # Quiz
+            if enable_quiz:
+                current_summary = st.session_state["summary_text"]
+                quiz_id = st.session_state["last_quiz"].get("id")
+                if quiz_id is None or st.session_state["last_quiz"].get("summary") != current_summary:
+                    questions = make_quiz_from_summary(current_summary, num_questions=num_quiz_qs)
+                    st.session_state["last_quiz"] = {"id": int(time.time()*1000), "summary": current_summary, "questions": questions}
+                    st.session_state["quiz_answers"] = {}
+
+                qs = st.session_state["last_quiz"]["questions"]
+                if qs:
+                    st.markdown("### Test Yourself QUIZ (TYQ)")
                     show_answers = st.checkbox("Show answers", value=False)
-                    for idx, q in enumerate(questions, start=1):
-                        st.markdown(f"**Q{idx}.** {q['question']}")
-                        choices = q["choices"]
-                        # display as radio but not interactive storing (just for display)
-                        user_choice = st.radio(f"Choices (Q{idx})", choices, key=f"q_{idx}")
+                    for idx, q in enumerate(qs, start=1):
+                        q_key = f"quiz_{st.session_state['last_quiz']['id']}_{idx}"
+                        if q_key not in st.session_state["quiz_answers"]:
+                            st.session_state["quiz_answers"][q_key] = None
+                        choice = st.radio(f"Q{idx}: {q['question']}", q["choices"], key=q_key)
+                        st.session_state["quiz_answers"][q_key] = choice
                         if show_answers:
                             st.markdown(f"**Answer:** {q['answer']}")
-                        # optional: immediate correctness feedback
-                        if show_answers:
-                            if user_choice == q['answer']:
-                                st.success("Correct ✅")
-                            else:
-                                st.error("Incorrect ❌")
+                            if choice == q['answer']: st.success("Correct ✅")
+                            else: st.error("Incorrect ❌")
 
-#footer
+    with col_info:
+        st.subheader("Current Config")
+        st.write("Model:", model_choice)
+        st.write("Style:", summary_style)
+        st.write("Voice:", "On" if enable_voice else "Off")
+        st.write("Quiz:", "On" if enable_quiz else "Off")
+        st.write("Input words:", len(st.session_state.get("input_text","").split()))
+
 st.markdown("---")
-st.caption("Built by Gabryel — Summarizer • Quiz • Voice | Model: " + model_choice)
+st.caption("Built by Gabriel. Summarizer • Quiz • Listen • Local Library")
