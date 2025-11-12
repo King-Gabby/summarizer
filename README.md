@@ -36,8 +36,8 @@ Upload, paste, or load from your custom library. Get instant summaries, quizzes,
 Clone this repo and install dependencies:
 
 ```bash
-git clone https://github.com/<your-username>/<repo-name>.git
-cd <repo-name>
+git clone https://github.com/<King-Gabby>/<summarizer>.git
+cd <summarizer>
 pip install -r requirements.txt
 streamlit run summarizer.py
 
