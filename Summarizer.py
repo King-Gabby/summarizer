@@ -161,11 +161,10 @@ else:
 enable_voice = st.sidebar.checkbox("Enable voice (play & download)", value=True)
 offline_mode = st.sidebar.checkbox("Use Offline Voice (pyttsx3)", value=False)
 tts_lang = st.sidebar.selectbox(
-    "TTS language (online)", 
+    "Select Language:", 
     ["en", "es", "fr", "de", "hi", "ja", "zh"], 
     index=0
 )
-tts_lang = st.sidebar.selectbox("Select Language:", ["en"], index=0)
 enable_quiz = st.sidebar.checkbox("Enable Quiz Generation", value=True)
 num_quiz_qs = st.sidebar.slider("Number of quiz questions", 1, 20, 3)
 max_chunk_words = st.sidebar.slider("Chunk size (words)", 400, 1200, 900, step=100)
