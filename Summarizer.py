@@ -52,13 +52,16 @@ def chunk_text(text, max_words=900):
 
 # --- Quiz helpers ---
 STOPWORDS = {
-    "the","and","is","in","it","of","to","a","that","this","for","with","as","on","are",
-    "was","be","by","an","or","from","at","which","we","were","their","has","have","but",
-    "not","they","you","i","he","she","his","her","its","will","can","all","about"
+    "the", "and", "is", "in", "it", "of", "to", "a", "that", "this", "for", "with",
+    "as", "on", "are", "was", "be", "by", "an", "or", "from", "at", "which", "we",
+    "were", "their", "has", "have", "but", "not", "they", "you", "i", "he", "she",
+    "his", "her", "its", "will", "can", "all", "about"
 }
 
+
 def extract_candidate_keywords(text, top_k=10):
-    words = re.findall(r"\b[a-zA-Z]{4,}\b", (text or "").lower())
+    """Simple frequency-based keyword extraction."""
+    words = re.findall(r"\b[a-zA-Z]{4,}\b", text.lower())
     freqs = {}
     for w in words:
         if w in STOPWORDS:
@@ -67,47 +70,112 @@ def extract_candidate_keywords(text, top_k=10):
     sorted_words = sorted(freqs.items(), key=lambda x: x[1], reverse=True)
     return [w for w, _ in sorted_words][:top_k]
 
-def make_quiz_from_summary(summary_text, num_questions=3):
-    questions = []
+
+def make_quiz_from_summary(summary_text, num_questions=5):
+    """Create fill-in-the-blank multiple choice quiz questions."""
     sentences = [s.strip() for s in re.split(r'(?<=[.!?])\s+', summary_text) if s.strip()]
     if not sentences:
-        return questions
+        return []
 
-    keywords = extract_candidate_keywords(summary_text, top_k=max(10, num_questions*3))
+    keywords = extract_candidate_keywords(summary_text, top_k=max(15, num_questions * 3))
     if not keywords:
-        return questions
+        return []
 
-    used_keywords = set()
     random.shuffle(keywords)
+    used_keywords = set()
+    questions = []
 
     for k in keywords:
         if len(questions) >= num_questions:
             break
-        chosen_sentence = None
-        for s in sentences:
-            if re.search(r"\b" + re.escape(k) + r"\b", s, flags=re.I):
-                chosen_sentence = s
-                break
+        # pick a sentence containing the keyword
+        chosen_sentence = next((s for s in sentences if re.search(rf"\b{k}\b", s, re.I)), None)
         if not chosen_sentence:
             chosen_sentence = random.choice(sentences)
 
-        pattern = re.compile(r"(?i)\b" + re.escape(k) + r"\b")
-        blank_sentence = pattern.sub("_____", chosen_sentence, count=1)
-
+        blank_sentence = re.sub(rf"(?i)\b{k}\b", "_____", chosen_sentence, count=1)
         distractors = [w for w in keywords if w != k and w not in used_keywords]
         random.shuffle(distractors)
         choices = [k] + distractors[:3]
-        if len(choices) < 4:
-            extra = [w for w in re.findall(r"\b[a-zA-Z]{4,}\b", summary_text.lower()) if w not in choices and w not in STOPWORDS]
-            random.shuffle(extra)
-            for e in extra:
-                if len(choices) >= 4:
-                    break
-                choices.append(e)
+
+        # capitalize choices for readability
+        choices = [c.capitalize() for c in choices]
         random.shuffle(choices)
-        questions.append({"question": blank_sentence, "choices": choices, "answer": k})
+
+        questions.append({
+            "question": blank_sentence,
+            "choices": choices,
+            "answer": k.capitalize()
+        })
         used_keywords.add(k)
+
+    random.shuffle(questions)
     return questions
+
+
+def run_quiz(summary_text, user_num_questions=5):
+    """Streamlit quiz interface with shuffled questions and score tracking."""
+    if "quiz_state" not in st.session_state:
+        st.session_state.quiz_state = {
+            "questions": make_quiz_from_summary(summary_text, user_num_questions),
+            "answers": {},
+            "submitted": False
+        }
+
+    quiz_state = st.session_state.quiz_state
+    questions = quiz_state["questions"]
+
+    if not questions:
+        st.info("⚠️ Could not generate quiz questions from this summary.")
+        return
+
+    st.markdown("## Knowledge Quiz")
+    st.caption("Answer all questions and click *Submit Quiz* below to see your score.")
+
+    # Render questions
+    for i, q in enumerate(questions, start=1):
+        st.markdown(f"**Q{i}.** {q['question']}")
+        choice = st.radio(
+            f"Select your answer for Q{i}",
+            q["choices"],
+            key=f"quiz_q_{i}",
+            index=0 if f"quiz_q_{i}" not in st.session_state else q["choices"].index(st.session_state.get(f'quiz_q_{i}', q["choices"][0])),
+        )
+        quiz_state["answers"][i] = choice
+
+    # Submit and scoring
+    if st.button("Submit Quiz"):
+        correct = 0
+        total = len(questions)
+
+        for i, q in enumerate(questions, start=1):
+            user_ans = quiz_state["answers"].get(i)
+            if user_ans == q["answer"]:
+                correct += 1
+
+        score = (correct / total) * 100
+        st.session_state.quiz_state["submitted"] = True
+        st.success(f"You scored {correct}/{total} ({score:.1f}%) ✅")
+
+        if score == 100:
+            st.balloons()
+        elif score >= 70:
+            st.info("Great job!🔥 You understood most of the summary.")
+        elif score >= 40:
+            st.warning("Not bad.☺️ But you can do better! Review the summary again.")
+        else:
+            st.error("Keep studying!😉 Try summarizing again and retake the quiz.")
+
+    # Reset option
+    if st.session_state.quiz_state.get("submitted", False):
+        if st.button("Retake Quiz"):
+            st.session_state.quiz_state = {
+                "questions": make_quiz_from_summary(summary_text, user_num_questions),
+                "answers": {},
+                "submitted": False
+            }
+            st.rerun()
+
 
 # --- TTS helper ---
 def generate_audio(summary_text, offline_mode=False, lang="en"):
