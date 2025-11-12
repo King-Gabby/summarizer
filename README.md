@@ -1,4 +1,5 @@
-# Smart Summarizer
+# Smart Summarizer 
+
 
 A Streamlit app to **summarize text**, generate **quizzes**, and provide **text-to-speech (TTS)** functionality.  
 You can upload PDFs, DOCX, or TXT files, or paste text manually. Features include:
@@ -9,9 +10,9 @@ You can upload PDFs, DOCX, or TXT files, or paste text manually. Features includ
 - ✅ Light/Dark theme support  
 
 
-# 🧠 AI Text Summarizer App
+# AI Text Summarizer App
 
-[![Build Status](https://github.com/<King-Gabby>/<summarizer>/actions/workflows/deploy.yml/badge.svg)](https://github.com/<King-Gabby>/<summarizer>/actions)
+[![Build Status](https://github.com/<King-Gabby>/<summarizer>/actions/workflows/deploy.yml/load-svgrepo-com.svg)](https://github.com/<King-Gabby>/<summarizer>/actions)
 [![View App](https://img.shields.io/badge/Open_Streamlit_App-brightgreen)](https://<king-gabby>.streamlit.app)
 
 A lightweight, AI-powered summarization app built with **Streamlit** and **Transformers**.  
@@ -30,7 +31,7 @@ Upload, paste, or load from your custom library — get instant summaries, quizz
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 Clone this repo and install dependencies:
 
