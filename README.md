@@ -16,7 +16,7 @@ You can upload PDFs, DOCX, or TXT files, or paste text manually. Features includ
 [![View App](https://img.shields.io/badge/Open_Streamlit_App-brightgreen)](https://<king-gabby>.streamlit.app)
 
 A lightweight, AI-powered summarization app built with **Streamlit** and **Transformers**.  
-Upload, paste, or load from your custom library — get instant summaries, quizzes, and text-to-speech (TTS) output.
+Upload, paste, or load from your custom library. Get instant summaries, quizzes, and text-to-speech (TTS) output.
 
 ---
 
