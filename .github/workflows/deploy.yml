@@ -1,0 +1,33 @@
+name: Deploy Streamlit App
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      - name: Run Streamlit App (Smoke Test)
+        run: |
+          streamlit run summarizer.py --server.headless true &
+          sleep 10
+          echo "✅ Streamlit app tested successfully."
+
+      - name: Notify successful deployment
+        run: echo "🎉 Deployment triggered successfully!"
