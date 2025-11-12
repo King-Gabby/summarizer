@@ -11,8 +11,8 @@ You can upload PDFs, DOCX, or TXT files, or paste text manually. Features includ
 
 # 🧠 AI Text Summarizer App
 
-[![Build Status](https://github.com/<your-username>/<repo-name>/actions/workflows/deploy.yml/badge.svg)](https://github.com/<your-username>/<repo-name>/actions)
-[![View App](https://img.shields.io/badge/🚀_Open_Streamlit_App-brightgreen)](https://<your-streamlit-username>.streamlit.app)
+[![Build Status](https://github.com/<King-Gabby>/<summarizer>/actions/workflows/deploy.yml/badge.svg)](https://github.com/<King-Gabby>/<summarizer>/actions)
+[![View App](https://img.shields.io/badge/Open_Streamlit_App-brightgreen)](https://<king-gabby>.streamlit.app)
 
 A lightweight, AI-powered summarization app built with **Streamlit** and **Transformers**.  
 Upload, paste, or load from your custom library — get instant summaries, quizzes, and text-to-speech (TTS) output.
