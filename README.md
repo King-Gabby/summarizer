@@ -27,7 +27,7 @@ Upload, paste, or load from your custom library. Get instant summaries, quizzes,
 ✅ Built-in **digital library** for quick access to files  
 ✅ **Quiz generator** — test your comprehension  
 ✅ Offline mode (basic TTS + caching)  
-✅ Download results as `.txt` or `.docx`
+✅ Download results as `.txt` or `.docx` or `.pdf`
 
 ---
 
@@ -44,7 +44,7 @@ streamlit run summarizer.py
 ## Installation
 
 ```bash
-git clone <your_repo_url>
+git clone <https://github.com/King-Gabby/summarizer.git>
 cd smart-summarizer
 python -m venv venv
 source venv/bin/activate  # macOS/Linux
