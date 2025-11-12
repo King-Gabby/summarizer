@@ -1,4 +1,4 @@
-# Smart Summarizer 
+# StudySpark ⚡️  
 
 
 A Streamlit app to **summarize text**, generate **quizzes**, and provide **text-to-speech (TTS)** functionality.  
