@@ -8,6 +8,38 @@ You can upload PDFs, DOCX, or TXT files, or paste text manually. Features includ
 - ✅ Lightweight quiz generation from summaries  
 - ✅ Light/Dark theme support  
 
+
+# 🧠 AI Text Summarizer App
+
+[![Build Status](https://github.com/<your-username>/<repo-name>/actions/workflows/deploy.yml/badge.svg)](https://github.com/<your-username>/<repo-name>/actions)
+[![View App](https://img.shields.io/badge/🚀_Open_Streamlit_App-brightgreen)](https://<your-streamlit-username>.streamlit.app)
+
+A lightweight, AI-powered summarization app built with **Streamlit** and **Transformers**.  
+Upload, paste, or load from your custom library — get instant summaries, quizzes, and text-to-speech (TTS) output.
+
+---
+
+## ⚙️ Features
+
+✅ Summarizes long documents using **DistilBART**  
+✅ Adjustable summary length  
+✅ Built-in **digital library** for quick access to files  
+✅ **Quiz generator** — test your comprehension  
+✅ Offline mode (basic TTS + caching)  
+✅ Download results as `.txt` or `.docx`
+
+---
+
+## 🚀 Quick Start
+
+Clone this repo and install dependencies:
+
+```bash
+git clone https://github.com/<your-username>/<repo-name>.git
+cd <repo-name>
+pip install -r requirements.txt
+streamlit run summarizer.py
+
 ## Installation
 
 ```bash
@@ -34,5 +66,16 @@ smart-summarizer/
 ├── library/          # Local storage for uploaded files
 ├── README.md
 └── .gitignore
+
+
+Developer:
+Developed by Gabryel ✨
+
+Built with ❤️ for AI, productivity, and learning.
+
+
+License
+MIT License © 2025 Gabriel Akoleaje
+Feel free to fork, improve, and co
 
 
