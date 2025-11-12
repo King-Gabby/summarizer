@@ -77,6 +77,6 @@ Built with ❤️ for AI, productivity, and learning.
 
 License
 MIT License © 2025 Gabriel Akoleaje
-Feel free to fork, improve, and co
+Feel free to fork, improve, and collaborate.
 
 
