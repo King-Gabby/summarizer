@@ -201,7 +201,7 @@ def generate_audio(summary_text, offline_mode=False, lang="en"):
 
 # --- Streamlit App ---
 st.set_page_config(page_title="Smart Summarizer", page_icon="🧠", layout="wide")
-st.title("StudySpark. Summarize • Quiz • Listen • Library")
+st.title("Summarizer. Summarize • Quiz • Listen • Library")
 st.markdown("Upload/paste text, summarize, create a quiz, listen, and store materials in your local library.")
 
 # Sidebar settings
@@ -419,4 +419,4 @@ with tab_summarizer:
         st.write("Input words:", len(st.session_state.get("input_text","").split()))
 
 st.markdown("---")
-st.caption("Built by Gabriel. StudySpark ⚡️ •Summarizer • Quiz • Listen • Local Library")
+st.caption("Built by Gabriel. Summarizer ⚡️ •Summary • Quiz • Listen • Local Library")
