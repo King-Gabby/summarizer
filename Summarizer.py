@@ -93,7 +93,7 @@ def make_quiz_from_summary(summary_text, num_questions=5):
         if not chosen_sentence:
             chosen_sentence = random.choice(sentences)
 
-        blank_sentence = re.sub(rf"(?i)\b{k}\b", "_____", chosen_sentence, count=1)
+        blank_sentence = re.sub(rf"(?i)\b{k}\b", "______", chosen_sentence, count=1)
         distractors = [w for w in keywords if w != k and w not in used_keywords]
         random.shuffle(distractors)
         choices = [k] + distractors[:3]
@@ -176,7 +176,6 @@ def run_quiz(summary_text, user_num_questions=5):
             }
             st.rerun()
 
-
 # --- TTS helper ---
 def generate_audio(summary_text, offline_mode=False, lang="en"):
     audio_bytes = io.BytesIO()
@@ -201,8 +200,8 @@ def generate_audio(summary_text, offline_mode=False, lang="en"):
 
 # --- Streamlit App ---
 st.set_page_config(page_title="Smart Summarizer", page_icon="images.png", layout="wide")
-st.title("Summarizer. Summarize • Quiz • Listen • Library")
-st.markdown("Upload/paste text, summarize, create a quiz, listen, and store materials in your local library.")
+st.title("Smart Summarizer. Summarize • Quiz • Listen • Library")
+st.markdown("Upload/paste text, summarize, create a quiz, listen, and store materials in your local library(for now).")
 
 # Sidebar settings
 st.sidebar.header("Configure Summary ⚙️")
@@ -229,9 +228,9 @@ else:
 enable_voice = st.sidebar.checkbox("Enable voice (play & download)", value=True)
 offline_mode = st.sidebar.checkbox("Use Offline Voice (pyttsx3)", value=False)
 tts_lang = st.sidebar.selectbox(
-    "Select Language:", 
-    ["en", "es", "fr", "de", "hi"], 
-    index=0
+    "Select Language", 
+    ["esp", "en", "fr", "de", "hi", "zh"], 
+    index=1
 )
 enable_quiz = st.sidebar.checkbox("Enable Quiz Generation", value=True)
 num_quiz_qs = st.sidebar.slider("Number of quiz questions", 1, 20, 3)
@@ -276,7 +275,7 @@ if "quiz_answers" not in st.session_state:
     st.session_state["quiz_answers"] = {}
 
 # --- Tabs ---
-tab_summarizer, tab_library = st.tabs(["📄 Summarizer", "📚 Library"])
+tab_summarizer, tab_library, tab_dictionary = st.tabs(["📄 Summarizer", "📚 Library", "📖  Dictionary"])
 
 # Library tab
 LIB_FOLDER = "library"
@@ -329,7 +328,7 @@ with tab_library:
                 try:
                     os.remove(os.path.join(LIB_FOLDER, fn))
                     st.warning(f"Deleted {fn}")
-                    st.experimental_rerun()
+                    st.rerun()
                 except Exception as e: st.error(f"Delete failed: {e}")
     else:
         st.info("Library empty.")
@@ -409,7 +408,8 @@ with tab_summarizer:
                             st.markdown(f"**Answer:** {q['answer']}")
                             if choice == q['answer']: st.success("Correct ✅")
                             else: st.error("Incorrect ❌")
-
+with tab_dictionary:
+    st.header("Coming soon!")
     with col_info:
         st.subheader("Current Config")
         st.write("Model:", model_choice)
@@ -419,4 +419,4 @@ with tab_summarizer:
         st.write("Input words:", len(st.session_state.get("input_text","").split()))
 
 st.markdown("---")
-st.caption("Built by Gabriel. Summarizer ⚡️ •Summary • Quiz • Listen • Local Library")
+st.caption("Built by Gabriel. Summarizer • Quiz • Listen • Library")
