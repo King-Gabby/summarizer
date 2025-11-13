@@ -230,7 +230,7 @@ enable_voice = st.sidebar.checkbox("Enable voice (play & download)", value=True)
 offline_mode = st.sidebar.checkbox("Use Offline Voice (pyttsx3)", value=False)
 tts_lang = st.sidebar.selectbox(
     "Select Language:", 
-    ["en", "es", "fr", "de", "hi", "ja", "zh"], 
+    ["en", "es", "fr", "de", "hi"], 
     index=0
 )
 enable_quiz = st.sidebar.checkbox("Enable Quiz Generation", value=True)
