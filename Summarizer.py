@@ -200,7 +200,7 @@ def generate_audio(summary_text, offline_mode=False, lang="en"):
         return None
 
 # --- Streamlit App ---
-st.set_page_config(page_title="Smart Summarizer", page_icon="🧠", layout="wide")
+st.set_page_config(page_title="Smart Summarizer", page_icon="images.png", layout="wide")
 st.title("Summarizer. Summarize • Quiz • Listen • Library")
 st.markdown("Upload/paste text, summarize, create a quiz, listen, and store materials in your local library.")
 
