@@ -244,7 +244,7 @@ else:
     st.markdown("<style>body, .stApp{background-color:#0e1117;color:#fff}</style>", unsafe_allow_html=True)
 
 st.sidebar.markdown("---")
-st.sidebar.info("Built by Gabryel — minimal editor, streaming summaries, KeyBERT support")
+st.sidebar.info("Built by Gabryel. Minimal editor, streaming summaries, KeyBERT support")
 
 # Cached HF model loader
 @st.cache_resource
