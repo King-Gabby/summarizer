@@ -264,7 +264,7 @@ LIB_FOLDER = "library"
 os.makedirs(LIB_FOLDER, exist_ok=True)
 
 # ---------- Page layout: Tabs ----------
-tab_sum, tab_lib, tab_quiz = st.tabs(["📄 Summarizer","📚 Library","📊 Quiz"])
+tab_sum, tab_lib, tab_quiz, tab_study= st.tabs(["📄 Summarizer","📚 Library","📊 Quiz", "📖 Study Mode"])
 
 # ----- Library tab -----
 with tab_lib:
@@ -615,7 +615,8 @@ with tab_quiz:
             if c3.button("Export results (.json)"):
                 data = json.dumps({"time": time.time(), "correct": correct, "total": total_q, "score": score}, indent=2)
                 st.download_button("Download results", data=data, file_name="quiz_result.json", mime="application/json")
-
+with st.tab_study:
+    st.subheader("Coming Soon")
 # Footer
 st.markdown("---")
 st.caption("Built by Gabriel — Smart Summarizer • Context-aware • KeyBERT support (optional) • Minimal editor • Streaming summaries")
