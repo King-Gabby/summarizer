@@ -608,8 +608,6 @@ with tab_quiz:
             if c3.button("Export results (.json)"):
                 data = json.dumps({"time": time.time(), "correct": correct, "total": total_q, "score": score}, indent=2)
                 st.download_button("Download results", data=data, file_name="quiz_result.json", mime="application/json")
-with st.tab_study:
-    st.subheader("Coming Soon")
 # Footer
 st.markdown("---")
 st.caption("Built by Gabriel. Smart Summarizer • Context-aware • KeyBERT support (optional) • Minimal editor • Streaming summaries")
