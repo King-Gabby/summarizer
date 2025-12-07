@@ -5,6 +5,7 @@ from docx import Document
 import io, os, re, time, random, json
 from gtts import gTTS
 import pyttsx3
+import fpdf
 
 # Text chunking config
 max_chunk_words = 300   
@@ -479,7 +480,7 @@ with tab_sum:
                 st.session_state["quiz_answers"] = {}
                 st.session_state["quiz_started_at"] = None
 
-            st.info("Quiz created — open the Quiz tab or take it now.")
+            st.info("Quiz created. Open the Quiz tab or take it now.")
             if st.button("Take Quiz now"):
                 st.experimental_set_query_params(tab="quiz")
                 st.rerun()
