@@ -361,13 +361,6 @@ with tab_sum:
         st.session_state["input_text"] = ta
 
     # Controls and quick info
-    col_a, col_b = st.columns([3,1])
-    '''with col_b:
-        st.markdown("**Quick Info**")
-        st.write("Model:", model_choice)
-        st.write("Focus:", focus_option)
-        st.write("Chunks:", f"{max_chunk_words} words")
-        st.write("Quiz questions:", num_quiz_qs if enable_quiz else "Disabled")'''
 
     # Summarize action
     summary_size = st.slider("Approx summary size (words)", 50, 500, 150, step=10)
