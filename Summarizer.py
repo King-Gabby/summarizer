@@ -5,7 +5,6 @@ from docx import Document
 import io, os, re, time, random, json
 from gtts import gTTS
 import pyttsx3
-import fpdf
 
 # Text chunking config
 max_chunk_words = 300   
