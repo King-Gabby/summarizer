@@ -199,7 +199,7 @@ def generate_audio(summary_text, offline_mode=False, lang="en"):
 
 # ----------------- Streamlit UI -----------------
 st.set_page_config(page_title="Smart Summarizer", page_icon="📄", layout="wide")
-st.title("AI Summarizer — Summary• Quiz • Listen • Library")
+st.title("AI Summarizer. Summary• Quiz • Listen • Library")
 
 # Sidebar controls
 st.sidebar.header("Configuration")
@@ -619,4 +619,4 @@ with st.tab_study:
     st.subheader("Coming Soon")
 # Footer
 st.markdown("---")
-st.caption("Built by Gabriel — Smart Summarizer • Context-aware • KeyBERT support (optional) • Minimal editor • Streaming summaries")
+st.caption("Built by Gabriel. Smart Summarizer • Context-aware • KeyBERT support (optional) • Minimal editor • Streaming summaries")
