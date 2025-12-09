@@ -229,7 +229,7 @@ tts_lang = tts_lang_map[tts_lang_choice]
 # Quiz UX
 enable_quiz = st.sidebar.checkbox("Enable Quiz", value=True)
 num_quiz_qs = st.sidebar.slider("Number of quiz questions", 1, 20, 5)
-immediate_feedback = st.sidebar.checkbox("Immediate per-question feedback", value=True)
+immediate_feedback = st.sidebar.checkbox("Immediate per-question feedback", value=False)
 quiz_timer_enabled = st.sidebar.checkbox("Enable quiz timer (per quiz)", value=False)
 quiz_time_seconds = st.sidebar.slider("Quiz time (seconds)", 15, 150, 80, step=10)
 
