@@ -603,7 +603,7 @@ with tab_quiz:
             if c2.button("Reset quiz (new attempt)"):
                 st.session_state["quiz_answers"] = {}
                 st.session_state["quiz_started_at"] = None
-                st.erun()
+                st.rerun()
 
             if c3.button("Export results (.json)"):
                 data = json.dumps({"time": time.time(), "correct": correct, "total": total_q, "score": score}, indent=2)
