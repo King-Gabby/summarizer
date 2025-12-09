@@ -220,7 +220,7 @@ enable_quill = st.sidebar.checkbox("Use minimal rich-text editor (Quill) if avai
 enable_quill = enable_quill and HAS_QUILL
 
 # Voice / TTS
-enable_voice = st.sidebar.checkbox("Enable voice (play & download)", value=True)
+enable_voice = st.sidebar.checkbox("Enable voice (play & download)", value=False)
 offline_voice = st.sidebar.checkbox("Offline TTS (pyttsx3) fallback", value=False)
 tts_lang_map = {"English":"en","Spanish":"es","French":"fr","German":"de","Hindi":"hi","Chinese":"zh-CN"}
 tts_lang_choice = st.sidebar.selectbox("TTS Language:", list(tts_lang_map.keys()), index=0)
@@ -231,7 +231,7 @@ enable_quiz = st.sidebar.checkbox("Enable Quiz", value=True)
 num_quiz_qs = st.sidebar.slider("Number of quiz questions", 1, 20, 5)
 immediate_feedback = st.sidebar.checkbox("Immediate per-question feedback", value=True)
 quiz_timer_enabled = st.sidebar.checkbox("Enable quiz timer (per quiz)", value=False)
-quiz_time_seconds = st.sidebar.slider("Quiz time (seconds)", 30, 900, 180, step=30)
+quiz_time_seconds = st.sidebar.slider("Quiz time (seconds)", 15, 150, 80, step=10)
 
 # Library & chunks
 #max_chunk_words = st.sidebar.slider("Chunk size (words)", 400, 1200, 900, step=100)
@@ -610,4 +610,5 @@ with tab_quiz:
                 st.download_button("Download results", data=data, file_name="quiz_result.json", mime="application/json")
 # Footer
 st.markdown("---")
-st.caption("Built by Gabriel. Smart Summarizer • Context-aware • KeyBERT support (optional) • Minimal editor • Streaming summaries")
+st.caption("""AI Study Tool essential for students & professionals.
+             • Built by Gabriel.  """)
