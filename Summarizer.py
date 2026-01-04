@@ -197,49 +197,80 @@ def generate_audio(summary_text, offline_mode=False, lang="en"):
         st.warning(f"TTS failed: {e}")
         return None
 
+# ----------------- Flashcard/Study helpers -----------------
+def generate_flashcards(text, num=5):
+    # Simple extraction for flashcards
+    sentences = [s.strip() for s in re.split(r'(?<=[.!?])\s+', text) if s.strip()]
+    if not sentences: return []
+    
+    kws = extract_keywords(text, top_n=num*3)
+    cards = []
+    seen_k = set()
+    
+    for k in kws:
+        if len(cards) >= num: break
+        if k.lower() in seen_k: continue
+        
+        # Find a good context sentence
+        def is_good_sent(s, key):
+            return key.lower() in s.lower() and 20 < len(s) < 200
+            
+        matching_sents = [s for s in sentences if is_good_sent(s, k)]
+        if matching_sents:
+            # Pick shortest or random
+            sent = min(matching_sents, key=len)
+            # Mask the keyword on the back? Or just show sentence? 
+            # Let's show Term (Front) -> Context Sentence (Back)
+            cards.append({"front": k.capitalize(), "back": sent})
+            seen_k.add(k.lower())
+            
+    return cards
+
 # ----------------- Streamlit UI -----------------
 st.set_page_config(page_title="Smart Summarizer", page_icon="📄", layout="wide")
 st.title("AI Summarizer. Summary• Quiz • Listen • Library")
 
 # Sidebar controls
 st.sidebar.header("Configuration")
-model_choice = st.sidebar.selectbox("Model (quality vs speed):", ["DistilBART (fast)", "BART Large (high quality)", "T5 Small (compact)"], index=0)
+
+with st.sidebar.expander("🤖 Model & Parameters", expanded=True):
+    model_choice = st.selectbox("Model:", ["DistilBART (fast)", "BART Large (high quality)", "T5 Small (compact)"], index=0)
+    summary_style = st.radio("Style:", ["Concise","Balanced","Detailed"], index=1)
+    
 model_map = {"DistilBART (fast)":"sshleifer/distilbart-cnn-12-6", "BART Large (high quality)":"facebook/bart-large-cnn", "T5 Small (compact)":"t5-small"}
 selected_model = model_map[model_choice]
 
-summary_style = st.sidebar.radio("Summary style:", ["Concise","Balanced","Detailed"], index=1)
 if summary_style == "Concise": min_len,max_len = 20,80
 elif summary_style == "Detailed": min_len,max_len = 80,350
 else: min_len,max_len = 40,180
 
-focus_option = st.sidebar.selectbox("Summary focus (context-aware):", ["General Summary","Main Ideas","Key Dates / Timeline","Action Items"])
-progressive_mode = st.sidebar.checkbox("Progressive streaming summary", value=True)
+with st.sidebar.expander("🎯 Focus & Features", expanded=False):
+    focus_option = st.selectbox("Focus:", ["General Summary","Main Ideas","Key Dates / Timeline","Action Items"])
+    progressive_mode = st.checkbox("Stream output", value=True)
+    enable_quill = st.checkbox("Rich text editor", value=True)
+    enable_voice = st.checkbox("Enable voice", value=False)
+    offline_voice = st.checkbox("Offline TTS", value=False)
 
-# Rich editor minimal toggle (include hyperlinks)
-enable_quill = st.sidebar.checkbox("Use minimal rich-text editor (Quill) if available", value=True)
 enable_quill = enable_quill and HAS_QUILL
 
-# Voice / TTS
-enable_voice = st.sidebar.checkbox("Enable voice (play & download)", value=False)
-offline_voice = st.sidebar.checkbox("Offline TTS (pyttsx3) fallback", value=False)
 tts_lang_map = {"English":"en","Spanish":"es","French":"fr","German":"de","Hindi":"hi","Chinese":"zh-CN"}
-tts_lang_choice = st.sidebar.selectbox("TTS Language:", list(tts_lang_map.keys()), index=0)
-tts_lang = tts_lang_map[tts_lang_choice]
+if enable_voice:
+    tts_lang_choice = st.sidebar.selectbox("Voice Language:", list(tts_lang_map.keys()), index=0)
+    tts_lang = tts_lang_map[tts_lang_choice]
+else:
+    tts_lang = "en"
 
-# Quiz UX
-enable_quiz = st.sidebar.checkbox("Enable Quiz", value=True)
-num_quiz_qs = st.sidebar.slider("Number of quiz questions", 1, 20, 5)
-immediate_feedback = st.sidebar.checkbox("Immediate per-question feedback", value=False)
-quiz_timer_enabled = st.sidebar.checkbox("Enable quiz timer (per quiz)", value=False)
-quiz_time_seconds = st.sidebar.slider("Quiz time (seconds)", 15, 150, 80, step=10)
-
-# Library & chunks
-#max_chunk_words = st.sidebar.slider("Chunk size (words)", 400, 1200, 900, step=100)
+with st.sidebar.expander("📊 Quiz Settings", expanded=False):
+    enable_quiz = st.checkbox("Enable Quiz", value=True)
+    num_quiz_qs = st.slider("Questions", 1, 20, 5)
+    immediate_feedback = st.checkbox("Immediate feedback", value=True)
+    quiz_timer_enabled = st.checkbox("Timer", value=False)
+    quiz_time_seconds = st.slider("Time (s)", 15, 150, 80, step=10)
 
 # Theme toggle
-theme_choice = st.sidebar.radio("Theme:", ["Dark","Light"], index=0)
+theme_choice = st.sidebar.select_slider("Theme", options=["Dark","Light"], value="Dark")
 if theme_choice == "Light":
-    st.markdown("<style>body, .stApp{background-color:#fff;color:#000}</style>", unsafe_allow_html=True)
+    st.markdown("<style>body, .stApp{background-color:#f0f2f6;color:#000}</style>", unsafe_allow_html=True)
 else:
     st.markdown("<style>body, .stApp{background-color:#0e1117;color:#fff}</style>", unsafe_allow_html=True)
 
@@ -258,13 +289,16 @@ if "summary_text" not in st.session_state: st.session_state["summary_text"] = ""
 if "last_quiz" not in st.session_state: st.session_state["last_quiz"] = {"id":None,"summary":"","questions":[]}
 if "quiz_answers" not in st.session_state: st.session_state["quiz_answers"] = {}
 if "quiz_started_at" not in st.session_state: st.session_state["quiz_started_at"] = None
+if "flashcards" not in st.session_state: st.session_state["flashcards"] = []
+if "flashcard_idx" not in st.session_state: st.session_state["flashcard_idx"] = 0
+if "flashcard_flipped" not in st.session_state: st.session_state["flashcard_flipped"] = False
 
 # Library folder
 LIB_FOLDER = "library"
 os.makedirs(LIB_FOLDER, exist_ok=True)
 
 # ---------- Page layout: Tabs ----------
-tab_sum, tab_lib, tab_quiz, tab_study= st.tabs(["📄 Summarizer","📚 Library","📊 Quiz", "📖 Study Mode"])
+tab_sum, tab_lib, tab_quiz, tab_study = st.tabs(["📄 Summarizer","📚 Library","📊 Quiz", "🧠 Study Mode"])
 
 # ----- Library tab -----
 with tab_lib:
@@ -608,7 +642,109 @@ with tab_quiz:
             if c3.button("Export results (.json)"):
                 data = json.dumps({"time": time.time(), "correct": correct, "total": total_q, "score": score}, indent=2)
                 st.download_button("Download results", data=data, file_name="quiz_result.json", mime="application/json")
-# Footer
-st.markdown("---")
-st.caption("""AI Study Tool essential for students & professionals.
-             • Built by Gabriel.  """)
+# ----- Study Mode (Flashcards) -----
+with tab_study:
+    st.header("🧠 Study Mode: Flashcards")
+    
+    # Check if we have text/summary to work with
+    has_text = bool(st.session_state.get("input_text", "").strip())
+    
+    if not has_text:
+        st.info("Please load or paste text in the Summarizer tab first to generate flashcards.")
+    else:
+        # Generate button
+        c1, c2 = st.columns([1, 4])
+        with c1:
+            if st.button("Generate Flashcards"):
+                with st.spinner("Creating flashcards..."):
+                    text = st.session_state["input_text"]
+                    # If we have a summary, maybe use that? Or full text? 
+                    # Full text is better for finding context sentences.
+                    cards = generate_flashcards(text, num=10)
+                    if cards:
+                        st.session_state["flashcards"] = cards
+                        st.session_state["flashcard_idx"] = 0
+                        st.session_state["flashcard_flipped"] = False
+                        st.success(f"Generated {len(cards)} flashcards!")
+                    else:
+                        st.warning("Could not extract enough terms for flashcards.")
+        
+        # Display Card
+        if st.session_state["flashcards"]:
+            cards = st.session_state["flashcards"]
+            idx = st.session_state["flashcard_idx"]
+            card = cards[idx]
+            
+            # Progress
+            st.caption(f"Card {idx+1}/{len(cards)}")
+            st.progress((idx+1)/len(cards))
+            
+            # Card UI - Use a container with border/styling
+            # State: front or back
+            is_flipped = st.session_state["flashcard_flipped"]
+            
+            # We can't easily click a div to flip in pure streamlit without extra components,
+            # so we use a button to flip.
+            
+            card_container = st.container()
+            with card_container:
+                # Basic CSS card look
+                if not is_flipped:
+                    st.markdown(
+                        f"""
+                        <div style="
+                            padding: 40px; 
+                            border: 2px solid #ccc; 
+                            border-radius: 10px; 
+                            text-align: center; 
+                            min-height: 200px; 
+                            display: flex; flex-direction: column; justify-content: center;
+                            background-color: #f9f9f9; color: #333;
+                        ">
+                            <h2 style='margin:0;'>{card['front']}</h2>
+                            <p style='color:#666; margin-top:10px;'>(Tap Flip to see context)</p>
+                        </div>
+                        """, 
+                        unsafe_allow_html=True
+                    )
+                else:
+                     st.markdown(
+                        f"""
+                        <div style="
+                            padding: 40px; 
+                            border: 2px solid #4CAF50; 
+                            border-radius: 10px; 
+                            text-align: center; 
+                            min-height: 200px; 
+                            display: flex; flex-direction: column; justify-content: center;
+                            background-color: #e8f5e9; color: #333;
+                        ">
+                            <p style='font-size:1.2em; line-height:1.5;'>"{card['back']}"</p>
+                        </div>
+                        """, 
+                        unsafe_allow_html=True
+                    )
+            
+            # Controls
+            col_prev, col_flip, col_next = st.columns([1,1,1])
+            with col_prev:
+                if st.button("⬅️ Previous"):
+                    if idx > 0:
+                        st.session_state["flashcard_idx"] -= 1
+                        st.session_state["flashcard_flipped"] = False
+                        st.rerun()
+            
+            with col_flip:
+                if st.button("🔄 Flip Card"):
+                    st.session_state["flashcard_flipped"] = not st.session_state["flashcard_flipped"]
+                    st.rerun()
+                    
+            with col_next:
+                if st.button("Next ➡️"):
+                    if idx < len(cards) - 1:
+                        st.session_state["flashcard_idx"] += 1
+                        st.session_state["flashcard_flipped"] = False
+                        st.rerun()
+        else:
+            if has_text:
+                st.info("Click 'Generate Flashcards' to start studying.")
