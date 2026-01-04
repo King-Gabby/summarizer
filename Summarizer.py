@@ -1,5 +1,5 @@
 import streamlit as st
-from transformers import pipeline
+# from transformers import pipeline
 import pdfplumber
 from docx import Document
 import io, os, re, time, random, json
@@ -280,6 +280,7 @@ st.sidebar.info("Built by Gabryel. Minimal editor, streaming summaries, KeyBERT 
 # Cached HF model loader
 @st.cache_resource
 def load_summarizer_model(model_name):
+    from transformers import pipeline
     return pipeline("summarization", model=model_name)
 
 # Session defaults
